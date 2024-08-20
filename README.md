@@ -2,6 +2,8 @@
 
 FastReader is a Chrome extension that enhances reading speed by highlighting words sequentially in web page paragraphs.
 
+![FastReader Demo](assets/fastreader-demo.gif)
+
 ## Features
 
 - Highlights words one by one in paragraphs
@@ -24,6 +26,12 @@ FastReader is a Chrome extension that enhances reading speed by highlighting wor
    - Start/stop the reader
    - Adjust reading speed
    - Initialize paragraphs (if needed)
+
+## How It Works
+
+Here's a demonstration of FastReader in action:
+
+![FastReader in Action](assets/fastreader-demo.gif)
 
 ## Developer Notes
 
