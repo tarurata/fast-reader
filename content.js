@@ -1,24 +1,23 @@
 (function() {
-    const delay = 500; // Set delay in milliseconds (adjust to change speed)
     const wordSpanId = 'highlighted-word'; // ID for the current highlighted word
     let isRunning = false;
     let index = 0;
     let words = [];
     let currentParagraph = null;
+    let highlightTimeout = null;
+    let delay = 250; // Default delay (250 WPM)
 
     // Function to highlight a word
     function highlightWord() {
-        console.log("index is ", index);
-        console.log("words.length is ", words.length);
-        if (index >= words.length) {
-            console.log('Highlighting completed.');
+        if (!isRunning || index >= words.length) {
+            console.log('Highlighting completed or stopped.');
             isRunning = false;
             return;
         }
 
         // Restore the previous word to normal (remove highlight)
         if (index > 0) {
-            const previousWord = document.getElementById(wordSpanId);
+            const previousWord = words[index - 1];
             if (previousWord) {
                 console.log(`Removing highlight from: "${previousWord.textContent.trim()}"`);
                 previousWord.style.background = '';
@@ -27,35 +26,52 @@
         }
 
         // Highlight the current word
-        const wordSpan = currentParagraph.querySelectorAll('.clickable-word')[index];
+        const wordSpan = words[index];
         console.log("Now, highlight word with yellow", wordSpan);
         wordSpan.style.background = 'yellow';
         wordSpan.id = wordSpanId;
         console.log(`Highlighting word: "${wordSpan.textContent.trim()}"`);
 
         index++;
-        setTimeout(highlightWord, delay);
+        highlightTimeout = setTimeout(highlightWord, delay);
     }
 
     // Function to handle word click
     function wordClickHandler(event) {
-        if (isRunning) return; // Prevent starting again if already running
-
         const clickedWord = event.target;
         console.log(`Clicked word: "${clickedWord.textContent.trim()}"`);
+
+        // Stop the current highlighting
+        stopHighlighting();
 
         // Set the current paragraph to the parent of the clicked word
         currentParagraph = clickedWord.closest('p');
         console.log("currentParagraph", currentParagraph);
 
-        const words = Array.from(currentParagraph.querySelectorAll('.clickable-word'));
-        console.log("words", words);
+        // Update the words array for the current paragraph
+        words = Array.from(currentParagraph.querySelectorAll('.clickable-word'));
+        console.log("Updated words array:", words);
+
         const textBeforeClick = words.slice(0, words.indexOf(clickedWord));
         index = textBeforeClick.length; // Set index to the clicked word's position
 
         console.log(`Starting index set to: ${index}`);
         isRunning = true;
         highlightWord();
+    }
+
+    // Function to stop highlighting
+    function stopHighlighting() {
+        isRunning = false;
+        if (highlightTimeout) {
+            clearTimeout(highlightTimeout);
+            highlightTimeout = null;
+        }
+        const highlightedWord = document.getElementById(wordSpanId);
+        if (highlightedWord) {
+            highlightedWord.style.background = '';
+            highlightedWord.id = '';
+        }
     }
 
     // Prepare the paragraph for word click handling
@@ -110,31 +126,45 @@
         }
         currentParagraph = paragraphs[paragraphIndex];
         words = Array.from(currentParagraph.querySelectorAll('.clickable-word'));
+        console.log("words count is", words.length); // Debug log
+        if (words.length === 0) {
+            console.error("No words found in the paragraph. Make sure initializeParagraphs() has been called.");
+            return;
+        }
         index = wordIndex;
         isRunning = true;
         highlightWord();
     }
 
-    // Function to stop highlighting
-    function stopHighlighting() {
-        isRunning = false;
-        const highlightedWord = document.getElementById(wordSpanId);
-        if (highlightedWord) {
-            highlightedWord.style.background = '';
-            highlightedWord.id = '';
+    // Modify the window.FastReader object to use message passing
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === "initialize") {
+            FastReader.initialize();
+        } else if (request.action === "start") {
+            delay = request.delay || delay;
+            FastReader.start(0, 0);
+        } else if (request.action === "stop") {
+            FastReader.stop();
+        } else if (request.action === "updateDelay") {
+            delay = request.delay;
+            if (highlightTimeout) {
+                stopHighlighting();
+                highlightWord();
+            }
         }
-    }
-
-    // Initialize paragraphs
-    initializeParagraphs();
+    });
 
     // Make functions and variables accessible from the console
     window.FastReader = {
         start: startHighlighting,
         stop: stopHighlighting,
         initialize: initializeParagraphs,
-        getState: () => ({ isRunning, currentParagraph, index, wordsCount: words.length })
+        getState: () => ({ 
+            isRunning, 
+            currentParagraph: currentParagraph ? currentParagraph.textContent : null, 
+            index, 
+            wordsCount: words.length,
+            words: words.map(w => w.textContent)
+        })
     };
-
-    console.log('FastReader is now accessible from the console. Use FastReader.start(paragraphIndex, wordIndex) to begin.');
 })();

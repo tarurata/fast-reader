@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>FastReader</title>
+  <style>
+    body { width: 300px; padding: 10px; }
+    button { margin: 5px; }
+    .slider-container { margin-top: 10px; }
+    #wpm-value { margin-left: 10px; }
+  </style>
+</head>
+<body>
+  <h1>FastReader</h1>
+  <button id="initialize">Initialize</button>
+  <button id="start">Start</button>
+  <button id="stop">Stop</button>
+  
+  <div class="slider-container">
+    <label for="wpm-slider">Reading Speed (WPM):</label>
+    <input type="range" id="wpm-slider" min="100" max="400" value="250" step="10">
+    <span id="wpm-value">250 WPM</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
