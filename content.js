@@ -3,7 +3,6 @@
     let isRunning = false;
     let index = 0;
     let words = [];
-    let currentParagraph = null;
     let highlightTimeout = null;
     let delay = 250; // Default delay (250 WPM)
 
@@ -44,16 +43,12 @@
         // Stop the current highlighting
         stopHighlighting();
 
-        // Set the current paragraph to the parent of the clicked word
-        currentParagraph = clickedWord.closest('p');
-        console.log("currentParagraph", currentParagraph);
-
-        // Update the words array for the current paragraph
-        words = Array.from(currentParagraph.querySelectorAll('.clickable-word'));
+        // Update the words array to include all clickable words in the document
+        words = Array.from(document.querySelectorAll('.clickable-word'));
         console.log("Updated words array:", words);
 
-        const textBeforeClick = words.slice(0, words.indexOf(clickedWord));
-        index = textBeforeClick.length; // Set index to the clicked word's position
+        // Set index to the clicked word's position
+        index = words.indexOf(clickedWord);
 
         console.log(`Starting index set to: ${index}`);
         isRunning = true;
@@ -74,13 +69,23 @@
         }
     }
 
-    // Prepare the paragraph for word click handling
-    function prepareParagraph(paragraph) {
-        const nodes = Array.from(paragraph.childNodes);
-        console.log('Preparing paragraph for highlighting...');
+    // Rename and modify this function
+    function initializeTextElements() {
+        const textElements = document.body.querySelectorAll('*:not(script):not(style)');
+        textElements.forEach(element => {
+            if (element.childNodes.length === 1 && element.childNodes[0].nodeType === Node.TEXT_NODE && element.textContent.trim().length > 0) {
+                prepareTextElement(element);
+            }
+        });
+    }
 
-        // Reset the paragraph's HTML
-        paragraph.innerHTML = '';
+    // Modify this function to work with any element
+    function prepareTextElement(element) {
+        const nodes = Array.from(element.childNodes);
+        console.log('Preparing element for highlighting...');
+
+        // Reset the element's HTML
+        element.innerHTML = '';
 
         nodes.forEach(node => {
             if (node.nodeType === Node.TEXT_NODE) {
@@ -90,45 +95,29 @@
                     const wordSpan = document.createElement('span');
                     wordSpan.className = 'clickable-word';
                     wordSpan.textContent = word + ' ';
-                    paragraph.appendChild(wordSpan);
+                    element.appendChild(wordSpan);
                 });
 
                 console.log(`Text node processed: "${node.textContent.trim()}"`);
             } else {
-                paragraph.appendChild(node);
-                console.log(`Non-text node preserved: ${node.outerHTML}`);
+                element.appendChild(node);
+                window.console.log(`Non-text node preserved: ${node.outerHTML}`);
             }
         });
 
-        // Set the current paragraph
-        currentParagraph = paragraph;
-
-        // Add click event listener to all words in this paragraph
-        paragraph.querySelectorAll('.clickable-word').forEach(word => {
+        // Add click event listener to all words in this element
+        element.querySelectorAll('.clickable-word').forEach(word => {
             word.addEventListener('click', wordClickHandler);
             console.log(`Added click listener to word: "${word.textContent.trim()}"`);
         });
     }
 
-    // Apply the script to all <p> tags
-    function initializeParagraphs() {
-        document.querySelectorAll('p').forEach(paragraph => {
-            prepareParagraph(paragraph);
-        });
-    }
-
-    // Function to start highlighting from a specific paragraph and word index
-    function startHighlighting(paragraphIndex, wordIndex = 0) {
-        const paragraphs = document.querySelectorAll('p');
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.length) {
-            console.error('Invalid paragraph index');
-            return;
-        }
-        currentParagraph = paragraphs[paragraphIndex];
-        words = Array.from(currentParagraph.querySelectorAll('.clickable-word'));
+    // Modify the startHighlighting function
+    function startHighlighting(wordIndex = 0) {
+        words = Array.from(document.querySelectorAll('.clickable-word'));
         console.log("words count is", words.length); // Debug log
         if (words.length === 0) {
-            console.error("No words found in the paragraph. Make sure initializeParagraphs() has been called.");
+            console.error("No words found. Make sure initializeTextElements() has been called.");
             return;
         }
         index = wordIndex;
@@ -142,7 +131,7 @@
             FastReader.initialize();
         } else if (request.action === "start") {
             delay = request.delay || delay;
-            FastReader.start(0, 0);
+            FastReader.start(0);
         } else if (request.action === "stop") {
             FastReader.stop();
         } else if (request.action === "updateDelay") {
@@ -158,10 +147,9 @@
     window.FastReader = {
         start: startHighlighting,
         stop: stopHighlighting,
-        initialize: initializeParagraphs,
+        initialize: initializeTextElements,
         getState: () => ({ 
             isRunning, 
-            currentParagraph: currentParagraph ? currentParagraph.textContent : null, 
             index, 
             wordsCount: words.length,
             words: words.map(w => w.textContent)
